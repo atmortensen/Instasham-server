@@ -26,16 +26,20 @@ app.get('/sign-s3', cors(), (req, res) => {
 
   s3.getSignedUrl('putObject', s3Params, (err, data) => {
     if(err){
-      console.log(err);
-      res.end();
+      console.log(err)
+      res.end()
     }
     res.json({
       signedURL: data,
       url: `https://${S3_BUCKET}.s3.amazonaws.com/${req.query['file-name']}`
-    });
-  });
+    })
+  })
 
-});
+})
+
+app.get('*', function(req, res) {
+  res.send('S3 Uploader') 
+})
 
 
 app.listen(process.env.PORT || 3000)
