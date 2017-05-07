@@ -4,9 +4,20 @@ const app = express();
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const pg = require('pg')
+const axios = require('axios')
 
 if(!process.env.PORT){
   require('dotenv').config()
+}
+
+function auth(req, res, next){
+  axios.get(`https://graph.facebook.com/debug_token?input_token=${req.get("authorization")}&access_token=${process.env.FB_ID}|${process.env.FB_SECRET}`)
+  .then(response => {
+    if(response.data.data.is_valid)
+      next()
+    else
+      res.json({error: 'NOT LOGGED IN'})
+  })
 }
 
 const poolConfig = {
@@ -16,7 +27,6 @@ const poolConfig = {
   host: process.env.DB_HOST, 
   port: process.env.DB_PORT, 
   ssl: true,
-  max: 10, // max number of clients in the pool
   idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
 }
 const pgPool = new pg.Pool(poolConfig)
@@ -59,7 +69,7 @@ app.post('/saveUrl', (req, res) => {
   })
 })
 
-app.get('/getUrls', (req, res) => {
+app.get('/getUrls', auth, (req, res) => {
   pgPool.query('SELECT * FROM imageUrls', [], (err, response) => {
     if(err) console.log(err)
     res.json(response.rows)
