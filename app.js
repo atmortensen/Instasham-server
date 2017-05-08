@@ -62,7 +62,7 @@ app.get('/sign-s3', auth, (req, res) => {
 
 })
 
-app.post('/saveUrl', (req, res) => {
+app.post('/saveUrl', auth, (req, res) => {
   pgPool.query('INSERT INTO imageUrls (url) VALUES ($1)', [req.body.url], (err) => {
     if(err) console.log(err)
     res.end()
@@ -76,14 +76,16 @@ app.get('/getUrls', auth, (req, res) => {
   })
 })
 
-app.delete('/removeUrl/:url', (req, res) => {
+app.delete('/removeUrl', auth, (req, res) => {
+  const urlSplit = req.query.url.split('/')
+  const fileName = urlSplit[urlSplit.length-1]
   s3.deleteObject({
     Bucket: S3_BUCKET,
-    Key: req.query['file-name']
+    Key: fileName
   })
-  pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.params.url], (err) => {
+  pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.query.url], (err) => {
     if(err) console.log(err)
-    res.json(response.rows)
+    res.end()
   })
 })
 
