@@ -39,7 +39,6 @@ const S3_BUCKET = process.env.S3_BUCKET
 const s3 = new aws.S3()
 
 app.get('/sign-s3', auth, (req, res) => {
-  
   const s3Params = {
     Bucket: S3_BUCKET,
     Key: req.query['file-name'],
@@ -79,13 +78,18 @@ app.get('/getUrls', auth, (req, res) => {
 app.delete('/removeUrl', auth, (req, res) => {
   const urlSplit = req.query.url.split('/')
   const fileName = urlSplit[urlSplit.length-1]
+  console.log(fileName)
   s3.deleteObject({
     Bucket: S3_BUCKET,
     Key: fileName
-  })
-  pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.query.url], (err) => {
-    if(err) console.log(err)
-    res.end()
+  }, function(err) {
+    if(err)console.log(err)
+    else {
+      pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.query.url], (err) => {
+        if(err) console.log(err)
+        res.end()
+      })
+    }
   })
 })
 
