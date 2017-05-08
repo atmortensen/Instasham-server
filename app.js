@@ -38,7 +38,7 @@ app.set('port', (process.env.PORT || 3000))
 const S3_BUCKET = process.env.S3_BUCKET
 const s3 = new aws.S3()
 
-app.get('/sign-s3', (req, res) => {
+app.get('/sign-s3', auth, (req, res) => {
   
   const s3Params = {
     Bucket: S3_BUCKET,
@@ -71,6 +71,17 @@ app.post('/saveUrl', (req, res) => {
 
 app.get('/getUrls', auth, (req, res) => {
   pgPool.query('SELECT * FROM imageUrls', [], (err, response) => {
+    if(err) console.log(err)
+    res.json(response.rows)
+  })
+})
+
+app.delete('/removeUrl/:url', (req, res) => {
+  s3.deleteObject({
+    Bucket: S3_BUCKET,
+    Key: req.query['file-name']
+  })
+  pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.params.url], (err) => {
     if(err) console.log(err)
     res.json(response.rows)
   })
