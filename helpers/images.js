@@ -1,10 +1,11 @@
+exports = module.exports = {}
 const aws = require('aws-sdk')
 const s3 = new aws.S3()
 if(!process.env.PORT){
   require('dotenv').config()
 }
 
-function signS3(req, res){
+exports.signS3 = function(req, res){
   const s3Params = {
     Bucket: process.env.S3_BUCKET,
     Key: req.query['file-name'],
@@ -25,5 +26,3 @@ function signS3(req, res){
     })
   })
 }
-
-module.exports = signS3

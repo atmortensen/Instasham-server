@@ -1,21 +1,25 @@
 const app = require('express')()
-var server = require('http').Server(app)
-var io = require('socket.io')(server)
+const server = require('http').Server(app)
+const io = require('socket.io')(server)
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const auth = require('./helpers/fb-auth')
-const signS3 = require('./helpers/s3-upload')
+const images = require('./helpers/images')
 const db = require('./helpers/db-connect')
 const profiles = require('./helpers/profiles')
 const chat = require('./helpers/chat')
+const users = require('./helpers/users')
 
+chat.join(io)
 app.use(cors())
 app.use(bodyParser.json())
 app.set('port', (process.env.PORT || 3000))
 
-app.get('/sign-s3', auth, signS3)
-app.post('/login', profiles.login)
-io.on('connection', chat)
+app.get('/images/signS3', auth, images.signS3)
+app.post('/profiles/login', profiles.login)
+app.get('/users/findAll', auth, users.findAll)
+app.get('/chat/messages/:user1/:user2', auth, chat.getMessages)
+app.post('/chat/message', auth, chat.newMessage(io))
 
 app.post('/saveUrl', auth, (req, res) => {
   db.query('INSERT INTO imageUrls (url) VALUES ($1)', [req.body.url], (err) => {
