@@ -1,75 +1,31 @@
-const express = require('express');
-const aws = require('aws-sdk');
-const app = express();
+const app = require('express')()
+var server = require('http').Server(app)
+var io = require('socket.io')(server)
 const cors = require('cors')
 const bodyParser = require('body-parser')
-const pg = require('pg')
-const axios = require('axios')
-
-if(!process.env.PORT){
-  require('dotenv').config()
-}
-
-function auth(req, res, next){
-  axios.get(`https://graph.facebook.com/debug_token?input_token=${req.get("authorization")}&access_token=${process.env.FB_ID}|${process.env.FB_SECRET}`)
-  .then(response => {
-    if(response.data.data.is_valid)
-      next()
-    else
-      res.json({error: 'NOT LOGGED IN'})
-  })
-}
-
-const poolConfig = {
-  user: process.env.DB_USER, 
-  database: process.env.DB_NAME, 
-  password: process.env.DB_PASS, 
-  host: process.env.DB_HOST, 
-  port: process.env.DB_PORT, 
-  ssl: true,
-  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
-}
-const pgPool = new pg.Pool(poolConfig)
+const auth = require('./helpers/fb-auth')
+const signS3 = require('./helpers/s3-upload')
+const db = require('./helpers/db-connect')
+const profiles = require('./helpers/profiles')
+const chat = require('./helpers/chat')
 
 app.use(cors())
 app.use(bodyParser.json())
 app.set('port', (process.env.PORT || 3000))
 
-const S3_BUCKET = process.env.S3_BUCKET
-const s3 = new aws.S3()
-
-app.get('/sign-s3', auth, (req, res) => {
-  const s3Params = {
-    Bucket: S3_BUCKET,
-    Key: req.query['file-name'],
-    Expires: 60,
-    ContentEncoding: 'base64',
-    ContentType: 'image/jpeg',
-    ACL: 'public-read'
-  };
-
-  s3.getSignedUrl('putObject', s3Params, (err, data) => {
-    if(err){
-      console.log(err)
-      res.end()
-    }
-    res.json({
-      signedURL: data,
-      url: `https://${S3_BUCKET}.s3.amazonaws.com/${req.query['file-name']}`
-    })
-  })
-
-})
+app.get('/sign-s3', auth, signS3)
+app.post('/login', profiles.login)
+io.of('/chat').on('connection', chat)
 
 app.post('/saveUrl', auth, (req, res) => {
-  pgPool.query('INSERT INTO imageUrls (url) VALUES ($1)', [req.body.url], (err) => {
+  db.query('INSERT INTO imageUrls (url) VALUES ($1)', [req.body.url], (err) => {
     if(err) console.log(err)
     res.end()
   })
 })
 
 app.get('/getUrls', auth, (req, res) => {
-  pgPool.query('SELECT * FROM imageUrls', [], (err, response) => {
+  db.query('SELECT * FROM imageUrls', [], (err, response) => {
     if(err) console.log(err)
     res.json(response.rows)
   })
@@ -78,14 +34,13 @@ app.get('/getUrls', auth, (req, res) => {
 app.delete('/removeUrl', auth, (req, res) => {
   const urlSplit = req.query.url.split('/')
   const fileName = urlSplit[urlSplit.length-1]
-  console.log(fileName)
   s3.deleteObject({
     Bucket: S3_BUCKET,
     Key: fileName
   }, function(err) {
     if(err)console.log(err)
     else {
-      pgPool.query('DELETE FROM imageUrls WHERE url = $1', [req.query.url], (err) => {
+      db.query('DELETE FROM imageUrls WHERE url = $1', [req.query.url], (err) => {
         if(err) console.log(err)
         res.end()
       })
@@ -93,6 +48,6 @@ app.delete('/removeUrl', auth, (req, res) => {
   })
 })
 
-app.listen(app.get('port'), function(){
+server.listen(app.get('port'), function(){
   console.log('Listening on port ' + app.get('port'))
 })
