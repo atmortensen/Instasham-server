@@ -15,7 +15,7 @@ app.set('port', (process.env.PORT || 3000))
 
 app.get('/sign-s3', auth, signS3)
 app.post('/login', profiles.login)
-io.of('/chat').on('connection', chat)
+io.on('connection', chat)
 
 app.post('/saveUrl', auth, (req, res) => {
   db.query('INSERT INTO imageUrls (url) VALUES ($1)', [req.body.url], (err) => {
