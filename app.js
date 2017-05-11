@@ -18,7 +18,9 @@ app.set('port', (process.env.PORT || 3000))
 app.get('/images/signS3', auth, images.signS3)
 app.post('/profiles/login', profiles.login)
 app.get('/users/findAll', auth, users.findAll)
+app.get('/users/findOne/:id', auth, users.findOne)
 app.get('/chat/messages/:user1/:user2', auth, chat.getMessages)
+app.get('/chat/chats/:userId', auth, chat.getChats)
 app.post('/chat/message', auth, chat.newMessage(io))
 
 app.post('/saveUrl', auth, (req, res) => {

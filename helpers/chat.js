@@ -29,4 +29,29 @@ exports.getMessages = (req, res) => {
   })
 }
 
+exports.getChats = (req, res) => {
+  db.query('SELECT * FROM messages WHERE sender=$1 OR receiver=$1', 
+  [req.params.userId], (err, response) => {
+    if(err) console.log(err)
+    // Separtate messages into chats
+    let chats = {}
+    response.rows.forEach(message => {
+      let added = false
+      let id = message.sender
+      if(id === req.params.userId) 
+        id = message.receiver
+      for(var prop in chats){
+        if(prop === id){
+          chats[prop].push(message)
+          added = true
+        }
+      }
+      if(!added){
+        chats[id] = [message]
+      }
+    })
+    res.json(chats)
+  })
+}
+
 

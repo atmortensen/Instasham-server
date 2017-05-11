@@ -8,3 +8,10 @@ exports.findAll = function(req, res){
 		res.json(response.rows)
   })
 }
+
+exports.findOne = function(req, res){
+	db.query('SELECT * FROM users WHERE id = $1', [req.params.id], (err, response) => {
+    if(err) console.log(err)
+		res.json(response.rows[0])
+  })
+}
